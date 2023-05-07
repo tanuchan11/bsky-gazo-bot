@@ -21,8 +21,12 @@ class GazoBot:
     ) -> None:
         self.logger = logger
         self.seconds_duplicate_post = seconds_duplicate_post
-        self.bsky_bot = BskyBot(username, password, logger)
+        self.bsky_bot = BskyBot(username, password, min_request_interval_sec=1, logger=logger)
         self.image_dataset = ImageDataset(data_dir=data_dir)
+
+    def reset_session(self) -> None:
+        self.logger.info(f"Init session")
+        self.bsky_bot.init_session()
 
     def gather_image(self) -> None:
         """メンションされた投稿のうち，画像添付のもので保存したことない画像をすべて保存する"""
@@ -63,6 +67,7 @@ class GazoBot:
         except EmptyPostImageException:
             self.logger.info("Empty post image.")
             self.bsky_bot.post_feed("投稿する画像がありません")
+            return
         except Exception as e:
             raise e
         assert image

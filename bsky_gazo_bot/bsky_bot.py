@@ -1,9 +1,10 @@
 import datetime
 import logging
+import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import requests
 
@@ -21,17 +22,37 @@ class ReplyRef:
 
 
 class BskyBot:
-    def __init__(self, username: str, password: str, logger: logging.Logger = logging.getLogger(__name__)) -> None:
+    init_session: Callable[[], None]
+
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        min_request_interval_sec: int = 0,
+        logger: logging.Logger = logging.getLogger(__name__),
+    ) -> None:
         assert len(username), "Empty username"
         assert len(password), "Empty password"
         self.api_server = "https://bsky.social"
         self.logger = logger
         self.init_session = lambda: self.init_session_impl(username, password)
         self.init_session()
+        self.min_request_interval_sec = min_request_interval_sec
+        self.last_requested = None
+
+    def __may_wait(self) -> None:
+        """May wait `min_request_interval_sec` to avoid too frequent request to the api server."""
+        if self.last_requested is None:
+            self.last_requested = datetime.datetime.now()
+        else:
+            now = datetime.datetime.now()
+            time.sleep(min(self.min_request_interval_sec, (now - self.last_requested).seconds))
+            self.last_requested = now
 
     def init_session_impl(self, username: str, password: str) -> None:
         self.logger.info("Initialize session")
         try:
+            self.__may_wait()
             res = requests.post(
                 self.api_server + "/xrpc/com.atproto.server.createSession",
                 json={"identifier": username, "password": password},
@@ -53,6 +74,7 @@ class BskyBot:
         self.logger.info(f"Update seen")
         try:
             seen_at = datetime.datetime.now().isoformat().replace("+00:00", "Z")
+            self.__may_wait()
             res = requests.post(
                 self.api_server + "/xrpc/app.bsky.notification.updateSeen",
                 json={"seenAt": seen_at},
@@ -68,6 +90,7 @@ class BskyBot:
         self.logger.info(f"Get {limit} notifications")
         try:
             assert limit > 0, "limit <= 0"
+            self.__may_wait()
             res = requests.get(
                 self.api_server + "/xrpc/app.bsky.notification.listNotifications",
                 params={"limit": limit},
@@ -82,6 +105,7 @@ class BskyBot:
     def get_post_thread(self, uri: str, depth: int) -> Dict[str, Any]:
         self.logger.info(f"Get thread uri = {uri} ")
         try:
+            self.__may_wait()
             res = requests.get(
                 self.api_server + "/xrpc/app.bsky.feed.getPostThread",
                 params={"uri": uri, "depth": depth},
@@ -97,6 +121,7 @@ class BskyBot:
         try:
             headers = self.__init_headers()
             headers["Content-Type"] = "image/jpeg"
+            self.__may_wait()
             res = requests.post(
                 self.api_server + "/xrpc/com.atproto.repo.uploadBlob", data=image_bytes, headers=headers
             )
@@ -125,6 +150,8 @@ class BskyBot:
                 data["record"]["embed"]["$type"] = "app.bsky.embed.images"
                 upload_image = self.upload_image(image.open("rb").read())
                 data["record"]["embed"]["images"] = [{"alt": "", "image": upload_image["blob"]}]
+
+            self.__may_wait()
             res = requests.post(
                 self.api_server + "/xrpc/com.atproto.repo.createRecord", json=data, headers=self.__init_headers()
             )

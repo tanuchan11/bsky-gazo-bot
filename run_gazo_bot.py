@@ -19,7 +19,7 @@ class RunGazoBotConfig:
     seconds_duplicate_post: int
     init_session_priod_sec: int
     backup_priod_sec: int
-    hear_beat_sec: int
+    heart_beat_sec: int
 
 
 class HeartBeater:
@@ -59,7 +59,7 @@ def run_gazo_bot(config: RunGazoBotConfig, logger: logging.Logger) -> None:
                 gazo_bot.post_image()
             if backup_beater():
                 gazo_bot.backup_data_dir()
-            time.sleep(config.hear_beat_sec)
+            time.sleep(config.heart_beat_sec)
     finally:
         gazo_bot.close()
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--post_image_priod_hour", type=int, default=24)
     parser.add_argument("--gather_image_period_sec", type=int, default=60 * 5)
     parser.add_argument("--backup_priod_hour", type=int, default=12)
-    parser.add_argument("--hear_beat_sec", type=int, default=30)
+    parser.add_argument("--heart_beat_sec", type=int, default=30)
 
     args = parser.parse_args()
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         post_image_period_sec=hours_to_seconds(args.post_image_priod_hour),
         gather_image_period_sec=args.gather_image_period_sec,
         backup_priod_sec=hours_to_seconds(args.backup_priod_hour),
-        hear_beat_sec=args.heart_beat_sec,
+        heart_beat_sec=args.heart_beat_sec,
     )
 
     config.log_dir.mkdir(parents=True, exist_ok=True)

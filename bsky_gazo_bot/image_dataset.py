@@ -1,9 +1,9 @@
 import datetime
 import logging
+import random
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import numpy as np
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -62,11 +62,12 @@ class ImageDataset:
             is None
         )
 
-    def add(self, post_cid: str, post_uri: str, index: int, image) -> None:
+    def add(self, post_cid: str, post_uri: str, index: int, image_data: bytes) -> None:
         self.logger.info(f"Add image cid={post_cid} uri={post_uri}")
         filename = (self.image_file_dir / f"{post_cid}_{index:01}").with_suffix(".jpg")
         assert not filename.exists()
-        image.save(filename)
+        with filename.open("wb") as f:
+            f.write(image_data)
         image = Image(
             post_cid=post_cid, post_uri=post_uri, index=index, filename=filename.name, add_date=datetime.datetime.now()
         )
@@ -117,17 +118,15 @@ class ImageDataset:
                 no_posted.append(image_check)
 
         if len(no_posted):
-            image_check = np.random.choice(no_posted)
+            image_check = random.choice(no_posted)
             image = self.session.query(Image).filter(Image.id == image_check.image_id).first()
             self.session.add(ImagePostHistory(image_id=image.id, post_date=post_date))
             self.session.commit()
             return self.image_file_dir / image.filename
 
         if len(no_posted_since_n_secs):
-            p = np.array([x[1] for x in no_posted_since_n_secs])
-            p /= p.sum()
-            index = np.random.choice(len(no_posted_since_n_secs), p=p)
-            image_check, image_post_history = no_posted_since_n_secs[index]
+            weights = [x[1] for x in no_posted_since_n_secs]
+            image_check, image_post_history = random.choices(no_posted_since_n_secs, weights=weights)[0]
             image = self.session.query(Image).filter(Image.id == image_check.image_id).first()
             self.session.add(ImagePostHistory(image_id=image.id, post_date=post_date))
             self.session.commit()

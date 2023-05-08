@@ -2,10 +2,8 @@
 
 ## How to init
 
-```bash
-pipenv install --dev
-pipenv shell
-```
+1. `pip install sqlalchemy Flask requests`
+2. `tar`と[rclone](https://rclone.org/)が使えるようにする
 
 ### How to run
 

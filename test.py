@@ -11,7 +11,9 @@ from bsky_gazo_bot.image_dataset import EmptyPostImageException, ImageDataset
 def test_image_dataset():
     with tempfile.TemporaryDirectory() as data_dir:
         data_dir = Path(data_dir)
-        example_image = PIL.Image.fromarray(np.random.randint(low=0, high=256, size=(128, 128, 3), dtype=np.uint8))
+        example_image = PIL.Image.fromarray(
+            np.random.randint(low=0, high=256, size=(128, 128, 3), dtype=np.uint8)
+        ).tobytes()
         dataset = ImageDataset(data_dir)
 
         # can add images

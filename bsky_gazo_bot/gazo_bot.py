@@ -1,10 +1,9 @@
-import io
 import logging
+import subprocess
 from pathlib import Path
 from typing import Optional
 
 import requests
-from PIL import Image
 
 from bsky_gazo_bot.bsky_bot import BskyBot, Ref, ReplyRef
 from bsky_gazo_bot.image_dataset import EmptyPostImageException, ImageDataset
@@ -23,6 +22,12 @@ class GazoBot:
         self.seconds_duplicate_post = seconds_duplicate_post
         self.bsky_bot = BskyBot(username, password, min_request_interval_sec=1, logger=logger)
         self.image_dataset = ImageDataset(data_dir=data_dir)
+        self.data_dir = data_dir
+
+    def backup_data_dir(self) -> None:
+        res = subprocess.run(f"bash backup.sh {self.data_dir}".split(), capture_output=True)
+        self.logger.info(f"Run backup.sh. returncode = {res.returncode}, {res.stdout.decode()} {res.stderr.decode()}")
+        assert res.returncode == 0, f"Failed to run backup.sh"
 
     def reset_session(self) -> None:
         self.logger.info(f"Init session")
@@ -50,8 +55,7 @@ class GazoBot:
             # ダウンロードして保存
             thread = self.bsky_bot.get_post_thread(uri, 1)["thread"]
             for i, image in enumerate(thread["post"]["embed"]["images"]):
-                x = Image.open(io.BytesIO(requests.get(image["fullsize"]).content)).convert("RGB")
-                self.image_dataset.add(cid, uri, i, x)
+                self.image_dataset.add(cid, uri, i, requests.get(image["fullsize"]).content)
 
             # お礼を投稿
             self.bsky_bot.post_feed(
@@ -74,4 +78,4 @@ class GazoBot:
         self.bsky_bot.post_feed(text="", image=image)
 
     def close(self):
-        pass
+        self.backup_data_dir()

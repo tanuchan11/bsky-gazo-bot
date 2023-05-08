@@ -35,10 +35,11 @@ class BskyBot:
         assert len(password), "Empty password"
         self.api_server = "https://bsky.social"
         self.logger = logger
+        self.last_requested = None
+        self.min_request_interval_sec = min_request_interval_sec
+
         self.init_session = lambda: self.init_session_impl(username, password)
         self.init_session()
-        self.min_request_interval_sec = min_request_interval_sec
-        self.last_requested = None
 
     def __may_wait(self) -> None:
         """May wait `min_request_interval_sec` to avoid too frequent request to the api server."""

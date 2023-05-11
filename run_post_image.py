@@ -7,7 +7,6 @@ from bsky_gazo_bot.gazo_bot import GazoBot
 
 @dataclass
 class RunGazoBotConfig:
-    log_dir: Path
     data_dir: Path
 
 
@@ -25,14 +24,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("log_dir", type=Path)
     parser.add_argument("--data_dir", type=Path, default=Path("./data"))
 
     args = parser.parse_args()
 
     # init directories
-    config = RunGazoBotConfig(log_dir=args.log_dir, data_dir=args.data_dir)
-
-    config.log_dir.mkdir(parents=True, exist_ok=True)
+    config = RunGazoBotConfig(data_dir=args.data_dir)
     assert config.data_dir.exists()
     run_gazo_bot(config)

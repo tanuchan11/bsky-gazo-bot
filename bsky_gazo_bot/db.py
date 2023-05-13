@@ -57,7 +57,6 @@ class ImageDataset:
         self.session = sessionmaker(engine)()
 
     def is_added(self, post_cid: str, post_uri: str) -> bool:
-        self.logger.info(f"is_added cid={post_cid} uri={post_uri}")
         return (
             not self.session.query(Image).filter(Image.post_cid == post_cid).filter(Image.post_uri == post_uri).first()
             is None
@@ -185,7 +184,6 @@ class ReplyDataset:
         self.session = sessionmaker(engine)()
 
     def is_added(self, post_cid: str, post_uri: str) -> bool:
-        self.logger.info(f"is_added cid={post_cid} uri={post_uri}")
         return (
             not self.session.query(Reply).filter(Reply.post_cid == post_cid).filter(Reply.post_uri == post_uri).first()
             is None

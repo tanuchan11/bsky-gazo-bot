@@ -22,13 +22,14 @@ class ReplyRef:
 
 
 class BskyBot:
-    init_session: Callable[[], None]
+    init_session: Callable[[], Dict]
 
     def __init__(
         self,
         username: str,
         password: str,
         min_request_interval_sec: int = 0,
+        max_retry: int = 5,
         logger: logging.Logger = logging.getLogger(__name__),
     ) -> None:
         assert len(username), "Empty username"
@@ -37,9 +38,12 @@ class BskyBot:
         self.logger = logger
         self.last_requested = None
         self.min_request_interval_sec = min_request_interval_sec
-
+        self.max_retry = max_retry
         self.init_session = lambda: self.init_session_impl(username, password)
         self.init_session()
+
+    def __init_headers(self) -> Dict[str, Any]:
+        return {"Authorization": "Bearer " + self.apt_auth_token}
 
     def __may_wait(self) -> None:
         """May wait `min_request_interval_sec` to avoid too frequent request to the api server."""
@@ -50,113 +54,94 @@ class BskyBot:
             time.sleep(min(self.min_request_interval_sec, (now - self.last_requested).seconds))
             self.last_requested = now
 
-    def init_session_impl(self, username: str, password: str) -> None:
+    def __api_call(
+        self,
+        method: str,
+        url: str,
+        json: Optional[Dict] = None,
+        params: Optional[Dict] = None,
+        headers: Optional[Dict] = None,
+        data: Optional[bytes] = None,
+    ) -> Dict:
+        f = {"get": requests.get, "post": requests.post}[method]
+        for _ in range(self.max_retry):
+            try:
+                self.__may_wait()
+                res = f(url, json=json, params=params, headers=headers, data=data)
+                assert res.ok, res.text
+                json_dict = res.json()
+                return json_dict
+            except Exception as e:
+                self.logger.error(f"Failed to call api {method} {url} {json} {params} due to {e}")
+                self.logger.error(traceback.print_exc())
+        raise RuntimeError(f"Reaches max retry = {self.max_retry}")
+
+    def init_session_impl(self, username: str, password: str) -> Dict:
         self.logger.info("Initialize session")
-        try:
-            self.__may_wait()
-            res = requests.post(
-                self.api_server + "/xrpc/com.atproto.server.createSession",
-                json={"identifier": username, "password": password},
-            )
-            assert res.ok, f"response of createSession is not OK: {res.text}"
-            res = res.json()
-            self.apt_auth_token, self.did = res["accessJwt"], res["did"]
-        except Exception as e:
-            self.logger.error(
-                f"Failed to initialize session with server {self.api_server}. Check username and password."
-            )
-            self.logger.error(traceback.print_exc())
-            raise e
+        data = self.__api_call(
+            "post",
+            self.api_server + "/xrpc/com.atproto.server.createSession",
+            json={"identifier": username, "password": password},
+        )
+        self.apt_auth_token, self.did = data["accessJwt"], data["did"]
+        return data
 
-    def __init_headers(self) -> Dict[str, Any]:
-        return {"Authorization": "Bearer " + self.apt_auth_token}
-
-    def update_seen(self) -> str:
+    def update_seen(self) -> Dict:
         self.logger.info(f"Update seen")
-        try:
-            seen_at = datetime.datetime.now().isoformat().replace("+00:00", "Z")
-            self.__may_wait()
-            res = requests.post(
-                self.api_server + "/xrpc/app.bsky.notification.updateSeen",
-                json={"seenAt": seen_at},
-                headers=self.__init_headers(),
-            )
-            assert res.ok, res.text
-            return seen_at
-        except Exception as e:
-            self.logger.error(f"Failed to update seen {e}")
-            raise e
+        seen_at = datetime.datetime.now().isoformat().replace("+00:00", "Z")
+        return self.__api_call(
+            "post",
+            self.api_server + "/xrpc/app.bsky.notification.updateSeen",
+            json={"seenAt": seen_at},
+            headers=self.__init_headers(),
+        )
 
     def get_notifications(self, limit: int = 1) -> Dict:
         self.logger.info(f"Get {limit} notifications")
-        try:
-            assert limit > 0, "limit <= 0"
-            self.__may_wait()
-            res = requests.get(
-                self.api_server + "/xrpc/app.bsky.notification.listNotifications",
-                params={"limit": limit},
-                headers=self.__init_headers(),
-            )
-            assert res.ok, res.text
-            return res.json()
-        except Exception as e:
-            self.logger.error(f"Failed to get notificatios {e}")
-            raise e
+        assert limit > 0, "limit <= 0"
+        return self.__api_call(
+            "get",
+            self.api_server + "/xrpc/app.bsky.notification.listNotifications",
+            params={"limit": limit},
+            headers=self.__init_headers(),
+        )
 
     def get_post_thread(self, uri: str, depth: int) -> Dict[str, Any]:
         self.logger.info(f"Get thread uri = {uri} ")
-        try:
-            self.__may_wait()
-            res = requests.get(
-                self.api_server + "/xrpc/app.bsky.feed.getPostThread",
-                params={"uri": uri, "depth": depth},
-                headers=self.__init_headers(),
-            )
-            assert res.ok, res.text
-            return res.json()
-        except Exception as e:
-            self.logger.error(f"Failed to get post thread {e}")
-            raise e
+        return self.__api_call(
+            "get",
+            self.api_server + "/xrpc/app.bsky.feed.getPostThread",
+            params={"uri": uri, "depth": depth},
+            headers=self.__init_headers(),
+        )
 
-    def upload_image(self, image_bytes: bytes) -> Dict[str, Any]:
-        try:
-            headers = self.__init_headers()
-            headers["Content-Type"] = "image/jpeg"
-            self.__may_wait()
-            res = requests.post(
-                self.api_server + "/xrpc/com.atproto.repo.uploadBlob", data=image_bytes, headers=headers
-            )
-            assert res.ok
-            return res.json()
-        except Exception as e:
-            self.logger.error(f"Failed to upload image. due to {e}")
-            raise e
+    def upload_blob(self, image_bytes: bytes) -> Dict[str, Any]:
+        self.logger.info("Upload image")
+        headers = self.__init_headers()
+        headers["Content-Type"] = "image/jpeg"
+        return self.__api_call(
+            "post", self.api_server + "/xrpc/com.atproto.repo.uploadBlob", data=image_bytes, headers=headers
+        )
 
-    def post_feed(self, text: str, image: Optional[Path] = None, reply_ref: Optional[ReplyRef] = None) -> None:
+    def create_record(self, text: str, image: Optional[Path] = None, reply_ref: Optional[ReplyRef] = None) -> Dict:
         self.logger.info(f"Post feed text={text}, images={image}")
-        try:
-            data = {
-                "collection": "app.bsky.feed.post",
-                "$type": "app.bsky.feed.post",
-                "repo": self.did,
-                "record": {"createdAt": datetime.datetime.now().isoformat().replace("+00:00", "Z"), "text": text},
+        data = {
+            "collection": "app.bsky.feed.post",
+            "$type": "app.bsky.feed.post",
+            "repo": self.did,
+            "record": {"createdAt": datetime.datetime.now().isoformat().replace("+00:00", "Z"), "text": text},
+        }
+        if reply_ref:
+            data["record"]["reply"] = {
+                "root": {"uri": reply_ref.root.uri, "cid": reply_ref.root.cid},
+                "parent": {"uri": reply_ref.parent.uri, "cid": reply_ref.parent.cid},
             }
-            if reply_ref:
-                data["record"]["reply"] = {
-                    "root": {"uri": reply_ref.root.uri, "cid": reply_ref.root.cid},
-                    "parent": {"uri": reply_ref.parent.uri, "cid": reply_ref.parent.cid},
-                }
-            if image:
-                data["record"]["embed"] = {}
-                data["record"]["embed"]["$type"] = "app.bsky.embed.images"
-                upload_image = self.upload_image(image.open("rb").read())
-                data["record"]["embed"]["images"] = [{"alt": "", "image": upload_image["blob"]}]
+        if image:
+            data["record"]["embed"] = {}
+            data["record"]["embed"]["$type"] = "app.bsky.embed.images"
+            image_ref = self.upload_blob(image.open("rb").read())
+            data["record"]["embed"]["images"] = [{"alt": "", "image": image_ref["blob"]}]
 
-            self.__may_wait()
-            res = requests.post(
-                self.api_server + "/xrpc/com.atproto.repo.createRecord", json=data, headers=self.__init_headers()
-            )
-            assert res.ok, res.text
-        except Exception as e:
-            self.logger.error(f"Faield to post feed text={text}, image={image}, reply_ref={reply_ref}")
-            raise e
+        return self.__api_call(
+            "post", self.api_server + "/xrpc/com.atproto.repo.createRecord", json=data, headers=self.__init_headers()
+        )

@@ -14,7 +14,7 @@ from bsky_gazo_bot.gazo_bot import GazoBot
 class RunGazoBotConfig:
     log_dir: Path
     data_dir: Path
-    gather_image_period_sec: int
+    reply_notification_period_sec: int
     post_image_period_sec: int
     seconds_duplicate_post: int
     init_session_priod_sec: int
@@ -46,7 +46,7 @@ def run_gazo_bot(config: RunGazoBotConfig, logger: logging.Logger) -> None:
         password=os.environ["BSKY_PASSWORD"],
         logger=logger,
     )
-    gather_image_beater = HeartBeater(config.gather_image_period_sec)
+    reply_notification_beater = HeartBeater(config.reply_notification_period_sec)
     post_image_beater = HeartBeater(config.post_image_period_sec)
     init_session_beater = HeartBeater(config.init_session_priod_sec)
     backup_beater = HeartBeater(config.backup_priod_sec)
@@ -56,8 +56,8 @@ def run_gazo_bot(config: RunGazoBotConfig, logger: logging.Logger) -> None:
         while True:
             if init_session_beater():
                 gazo_bot.reset_session()
-            if gather_image_beater():
-                gazo_bot.gather_image()
+            if reply_notification_beater():
+                gazo_bot.reply_nofitications()
             if post_image_beater():
                 gazo_bot.post_image()
             if backup_beater():
@@ -78,10 +78,10 @@ if __name__ == "__main__":
     parser.add_argument("--days_duplicate_post", type=int, default=30)
     parser.add_argument("--init_session_priod_sec", type=int, default=60 * 60)
     parser.add_argument("--post_image_priod_hour", type=int, default=3)
-    parser.add_argument("--gather_image_period_sec", type=int, default=60 * 3)
+    parser.add_argument("--reply_notification_period_sec", type=int, default=60 * 3)
     parser.add_argument("--backup_priod_hour", type=int, default=12)
     parser.add_argument("--heart_beat_sec", type=int, default=60)
-    parser.add_argument('--post_on_start', action='store_true')
+    parser.add_argument("--post_on_start", action="store_true")
 
     args = parser.parse_args()
 
@@ -92,10 +92,10 @@ if __name__ == "__main__":
         seconds_duplicate_post=days_to_seconds(args.days_duplicate_post),
         init_session_priod_sec=args.init_session_priod_sec,
         post_image_period_sec=hours_to_seconds(args.post_image_priod_hour),
-        gather_image_period_sec=args.gather_image_period_sec,
+        reply_notification_period_sec=args.reply_notification_period_sec,
         backup_priod_sec=hours_to_seconds(args.backup_priod_hour),
         heart_beat_sec=args.heart_beat_sec,
-        post_on_start=args.post_on_start
+        post_on_start=args.post_on_start,
     )
 
     config.log_dir.mkdir(parents=True, exist_ok=True)

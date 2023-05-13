@@ -5,7 +5,7 @@ import numpy as np
 import PIL.Image
 import pytest
 
-from bsky_gazo_bot.image_dataset import EmptyPostImageException, ImageDataset
+from bsky_gazo_bot.db import EmptyPostImageException, ImageDataset
 
 
 def test_image_dataset():

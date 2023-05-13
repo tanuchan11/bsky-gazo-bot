@@ -8,6 +8,7 @@ import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import Column
+from sqlalchemy.sql.expression import func
 from sqlalchemy.types import Boolean, DateTime, Integer, String
 
 Base = declarative_base()
@@ -98,6 +99,13 @@ class ImageDataset:
             image_check.checked_date = checked_date
         self.session.commit()
 
+    def random_sample(self) -> Path:
+        self.logger.info("Random sample")
+        image = self.session.query(Image).order_by(func.random()).first()
+        if image is None:
+            raise EmptyPostImageException
+        return self.image_file_dir / image.filename
+
     def sample(self, seconds: int = 0) -> Path:
         self.logger.info(f"Sample an image {seconds}")
         no_posted: List[ImageCheck] = []
@@ -156,3 +164,41 @@ class ImageDataset:
             checked = image_check is not None
             res.append((image.id, image.filename, image.add_date, checked))
         return res
+
+
+class Reply(Base):
+    __tablename__ = "reply"
+    id = Column(Integer, primary_key=True)
+    post_cid = Column(String(255))
+    post_uri = Column(String(255))
+    post_text = Column(String)
+    reply_date = Column(DateTime)
+    reply_text = Column(String)
+
+
+class ReplyDataset:
+    def __init__(self, data_dir: Path, logger: logging.Logger = logging.getLogger(__name__)):
+        data_dir.mkdir(parents=True, exist_ok=True)
+        self.logger = logger
+        engine = sqlalchemy.create_engine(f'sqlite:///{data_dir.absolute() / "db.sqlite3"}')
+        Base.metadata.create_all(engine)
+        self.session = sessionmaker(engine)()
+
+    def is_added(self, post_cid: str, post_uri: str) -> bool:
+        self.logger.info(f"is_added cid={post_cid} uri={post_uri}")
+        return (
+            not self.session.query(Reply).filter(Reply.post_cid == post_cid).filter(Reply.post_uri == post_uri).first()
+            is None
+        )
+
+    def add(self, post_cid: str, post_uri: str, post_text: str, reply_text: str) -> None:
+        self.logger.info(f"Add reply cid={post_cid} uri={post_uri} post_text={post_text} reply_text={reply_text}")
+        reply = Reply(
+            post_cid=post_cid,
+            post_uri=post_uri,
+            post_text=post_text,
+            reply_date=datetime.datetime.now(),
+            reply_text=reply_text,
+        )
+        self.session.add(reply)
+        self.session.commit()

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
 
-from bsky_gazo_bot.image_dataset import ImageDataset
+from bsky_gazo_bot.db import ImageDataset
 
 logging.basicConfig(level=logging.INFO)
 

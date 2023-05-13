@@ -20,6 +20,7 @@ class RunGazoBotConfig:
     init_session_priod_sec: int
     backup_priod_sec: int
     heart_beat_sec: int
+    post_on_start: bool
 
 
 class HeartBeater:
@@ -49,6 +50,8 @@ def run_gazo_bot(config: RunGazoBotConfig, logger: logging.Logger) -> None:
     post_image_beater = HeartBeater(config.post_image_period_sec)
     init_session_beater = HeartBeater(config.init_session_priod_sec)
     backup_beater = HeartBeater(config.backup_priod_sec)
+    if config.post_on_start:
+        gazo_bot.post_image()
     try:
         while True:
             if init_session_beater():
@@ -73,11 +76,12 @@ if __name__ == "__main__":
     parser.add_argument("log_dir", type=Path)
     parser.add_argument("--data_dir", type=Path, default=Path("./data"))
     parser.add_argument("--days_duplicate_post", type=int, default=30)
-    parser.add_argument("--init_session_priod_sec", type=int, default=120)
-    parser.add_argument("--post_image_priod_hour", type=int, default=24)
-    parser.add_argument("--gather_image_period_sec", type=int, default=60 * 5)
+    parser.add_argument("--init_session_priod_sec", type=int, default=60 * 60)
+    parser.add_argument("--post_image_priod_hour", type=int, default=3)
+    parser.add_argument("--gather_image_period_sec", type=int, default=60 * 3)
     parser.add_argument("--backup_priod_hour", type=int, default=12)
-    parser.add_argument("--heart_beat_sec", type=int, default=30)
+    parser.add_argument("--heart_beat_sec", type=int, default=60)
+    parser.add_argument('--post_on_start', action='store_true')
 
     args = parser.parse_args()
 
@@ -91,6 +95,7 @@ if __name__ == "__main__":
         gather_image_period_sec=args.gather_image_period_sec,
         backup_priod_sec=hours_to_seconds(args.backup_priod_hour),
         heart_beat_sec=args.heart_beat_sec,
+        post_on_start=args.post_on_start
     )
 
     config.log_dir.mkdir(parents=True, exist_ok=True)

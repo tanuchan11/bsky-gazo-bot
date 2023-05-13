@@ -7,7 +7,7 @@ from bsky_gazo_bot.image_dataset import ImageDataset
 
 logging.basicConfig(level=logging.INFO)
 
-image_dataset = ImageDataset(Path("./tmp/data"))
+image_dataset = ImageDataset(Path("./data"))
 app = Flask(__name__)
 
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=str, default="127.0.0.1")
+    parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     app.run(host=args.host, port=args.port)

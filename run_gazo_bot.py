@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=Path, default=Path("./data"))
     parser.add_argument("--days_duplicate_post", type=int, default=365)
     parser.add_argument("--init_session_priod_sec", type=int, default=60 * 60)
-    parser.add_argument("--post_image_priod_hour", type=int, default=3)
+    parser.add_argument("--post_image_priod_hour", type=int, default=6)
     parser.add_argument("--reply_notification_period_sec", type=int, default=60 * 2)
     parser.add_argument("--backup_priod_hour", type=int, default=12)
     parser.add_argument("--heart_beat_sec", type=int, default=5)

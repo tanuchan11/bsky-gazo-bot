@@ -75,7 +75,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("log_dir", type=Path)
     parser.add_argument("--data_dir", type=Path, default=Path("./data"))
-    parser.add_argument("--days_duplicate_post", type=int, default=365)
+    parser.add_argument("--days_duplicate_post", type=int, default=7)
     parser.add_argument("--init_session_priod_sec", type=int, default=60 * 60)
     parser.add_argument("--post_image_priod_hour", type=int, default=6)
     parser.add_argument("--reply_notification_period_sec", type=int, default=60 * 2)

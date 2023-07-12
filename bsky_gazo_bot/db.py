@@ -62,7 +62,7 @@ class ImageDataset:
             is None
         )
 
-    def add(self, post_cid: str, post_uri: str, index: int, image_data: bytes) -> None:
+    def add(self, post_cid: str, post_uri: str, index: int, image_data: bytes) -> int:
         self.logger.info(f"Add image cid={post_cid} uri={post_uri}")
         filename = (self.image_file_dir / f"{post_cid}_{index:01}").with_suffix(".jpg")
         assert not filename.exists()
@@ -73,6 +73,7 @@ class ImageDataset:
         )
         self.session.add(image)
         self.session.commit()
+        return image.id
 
     def register_image(
         self,

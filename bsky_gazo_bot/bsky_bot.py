@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import requests
+from PIL import Image
 
 
 @dataclass
@@ -137,9 +138,14 @@ class BskyBot:
                 "parent": {"uri": reply_ref.parent.uri, "cid": reply_ref.parent.cid},
             }
         if image:
+            x = Image.open(image)
+            if max(x.width, x.height) > 900:
+                r = 900 / max(x.width, x.height)
+                x = x.resize((int(x.width * r), int(x.height * r)))
+
             data["record"]["embed"] = {}
             data["record"]["embed"]["$type"] = "app.bsky.embed.images"
-            image_ref = self.upload_blob(image.open("rb").read())
+            image_ref = self.upload_blob(x.tobytes())
             data["record"]["embed"]["images"] = [{"alt": "", "image": image_ref["blob"]}]
 
         return self.__api_call(

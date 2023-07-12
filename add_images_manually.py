@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_dir", type=Path)
     parser.add_argument("--data_dir", type=Path, default=Path("./data"))
-    parser.add_argument("--skip_register", action="store_trure")
+    parser.add_argument("--skip_register", action="store_true")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)

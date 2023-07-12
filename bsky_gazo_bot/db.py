@@ -65,7 +65,7 @@ class ImageDataset:
     def add(self, post_cid: str, post_uri: str, index: int, image_data: bytes) -> int:
         self.logger.info(f"Add image cid={post_cid} uri={post_uri}")
         filename = (self.image_file_dir / f"{post_cid}_{index:01}").with_suffix(".jpg")
-        assert not filename.exists()
+        assert not filename.exists(), filename
         with filename.open("wb") as f:
             f.write(image_data)
         image = Image(

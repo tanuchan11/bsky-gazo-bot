@@ -1,18 +1,20 @@
-import datetime
+import time
 import logging
 from pathlib import Path
 
 from PIL import Image
 
 from bsky_gazo_bot.db import ImageDataset
-
+import time
 
 def add_images_manually(input_dir: Path, data_dir: Path, skip_register: bool, ext: str = "jpg") -> None:
     assert input_dir.exists()
     image_dataset = ImageDataset(data_dir=data_dir)
-    uniq_id = "manually_add_" + str(datetime.datetime.now()).replace(" ", "_")
+    uniq_id_base = "manually_add_" + str(time.time()).replace(".", "_")
+    print(uniq_id_base)
     for i, file in enumerate(input_dir.glob(f"*.{ext}")):
         image = Image.open(file)
+        print(f'add {file}')
 
         # 大きい画像はリサイズ
         max_size = max(image.width, image.height)
@@ -21,6 +23,7 @@ def add_images_manually(input_dir: Path, data_dir: Path, skip_register: bool, ex
             image = image.resize((int(image.width * ratio), int(image.height * ratio)))
 
         # 画像の追加
+        uniq_id = uniq_id_base + f'_{i:04}'
         image_id = image_dataset.add(post_cid=uniq_id, post_uri=uniq_id, index=i, image_data=image.tobytes())
 
         if skip_register:

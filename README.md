@@ -1,5 +1,10 @@
 # bsky_gazo_bot
 
+## Dependency
+
+Python >= 3.9
+Pillow
+
 ## How to init
 
 1. `pip install sqlalchemy Flask requests`

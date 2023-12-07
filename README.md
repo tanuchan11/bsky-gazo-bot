@@ -2,8 +2,8 @@
 
 ## Dependency
 
-Python >= 3.9
-Pillow
+- Python >= 3.9
+- Pillow
 
 ## How to init
 

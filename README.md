@@ -7,8 +7,7 @@ Pillow
 
 ## How to init
 
-1. `pip install sqlalchemy Flask requests`
-2. `tar`と[rclone](https://rclone.org/)が使えるようにする
+`pip install sqlalchemy Flask requests Pillow`
 
 ### How to run
 

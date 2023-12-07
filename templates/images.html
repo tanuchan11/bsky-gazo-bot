@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Image List</h1>
+    <a href="/">Top</a>
+    <p>
+    <button onclick="location.href='/register/all_ok'">全部オッケー</button>
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>画像</th>
+                <th>ほげ</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for image_id, filename, date, checked in data %}
+            <tr>
+                <td>
+                    <img src="/images/{{ filename }}" height="200">
+                </td>
+                <td>
+                    <button onclick="send('{{ image_id }}', true)">Ok</button>
+                    <button onclick="send('{{ image_id }}', false)">Ng</button>
+                    <input type="text" maxlength="255" id="input-{{ image_id}}">
+                </td>
+                <td>ID: {{ image_id}}, 追加日：{{ date }}, Checked: {{ checked }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        function send(image_id, ok) {
+            reason = document.getElementById(`input-${image_id}`).value
+            console.log(image_id, ok, reason)
+            url = `/register?image_id=${image_id}&ok=${ok? "true" : "false"}`
+            if (reason.length > 0) {
+                url += `&reason=${reason}`
+            }
+            fetch(url, {method: "POST"})
+        }
+    </script>
+    </body>
+</html>
